@@ -155,7 +155,7 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     ###########################################################################
     uniqueArrays = np.unique(data[:, feature], return_counts=True)
     totalEntries = len(data)
-    baseEntropy = impurity_func(data)
+    baseImpurity = impurity_func(data)
 
     for i, value in enumerate(uniqueArrays[0]):
         mask = (data[:, feature] == value)
@@ -164,9 +164,9 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
         probabilityOfValue = uniqueArrays[1][i] / totalEntries
         goodness += probabilityOfValue * impurity
 
-    goodness = baseEntropy - goodness
+    goodness = baseImpurity - goodness
 
-    if gain_ratio:
+    if gain_ratio == True and goodness != 0:
         splitInInformation = 0
         for count in uniqueArrays[1]:
             probability = count / totalEntries
@@ -177,7 +177,7 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     ###########################################################################
     return goodness, groups
 
-def most_common_label(data):
+def countLabels(data):
     sumEdible = 0
     sumPoisonous = 0
     for entry in data[:, -1]:
@@ -185,6 +185,10 @@ def most_common_label(data):
             sumEdible += 1
         else:
             sumPoisonous += 1
+    return sumEdible, sumPoisonous
+
+def most_common_label(data):
+    sumEdible, sumPoisonous = countLabels(data)
     return 'p' if sumPoisonous > sumEdible else 'e'
 
 class DecisionNode:
@@ -201,6 +205,7 @@ class DecisionNode:
         self.chi = chi 
         self.max_depth = max_depth # the maximum allowed depth of the tree
         self.gain_ratio = gain_ratio
+        self.alreadyUsedFeatures = []
 
     
     
@@ -246,30 +251,57 @@ class DecisionNode:
         # TODO: Implement the function.                                           #
         ###########################################################################
         if self.depth == self.max_depth:
-            print("Reached max-depth")
             return
         
-        bestSplit = -1
+        bestSplit = 0
         bestSplitIndex = -1
         for i in range(self.data.shape[1] - 1):
-            split = goodness_of_split(self.data, i, impurity_func)[0]
-            if split > bestSplit:
+            split = goodness_of_split(self.data, i, impurity_func, self.gain_ratio)[0]
+            if split > bestSplit and i not in self.alreadyUsedFeatures:
                 bestSplit = split
                 bestSplitIndex = i
+        
+        if bestSplitIndex == -1:
+            return
+
+        childList = []
+        if self.chi != 1:
+            ChiSquareStatistic = 0
+            probabilityEdible, probabilityPoison = countLabels(self.data)
+            probabilityEdible /= len(self.data)
+            probabilityPoison /= len(self.data)
 
         valuesArray = np.unique(self.data[:, bestSplitIndex])
         for value in valuesArray:
             mask = (self.data[:, bestSplitIndex] == value)
             onlyValueRows = self.data[mask, :]
-            relevantData = np.delete(onlyValueRows, bestSplitIndex, 1)
-            node = DecisionNode(relevantData, bestSplitIndex, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
+            node = DecisionNode(onlyValueRows, bestSplitIndex, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
             node.terminal = True
-            self.add_child(node, value)
+            node.alreadyUsedFeatures = self.alreadyUsedFeatures.copy()
+            node.alreadyUsedFeatures.append(bestSplitIndex)
+            if self.chi != 1:
+                ChiSquareStatistic += chi_square_test(onlyValueRows, probabilityEdible, probabilityPoison)
+            childList.append(node)
 
+        if self.chi != 1 and ChiSquareStatistic < chi_table[len(valuesArray) - 1][self.chi]:
+            return
+
+        for i, value in enumerate(valuesArray):
+            self.add_child(childList[i], value)
+        
+        self.feature = bestSplitIndex
         self.terminal = False
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
+
+def chi_square_test(onlyValueRows, probabilityEdible, probabilityPoison):   #probabilityEdible, ProbabilityPoison, Df, Pf, Nf):
+    Df = len(onlyValueRows)
+    Pf, Nf = countLabels(onlyValueRows)
+    EZero = Df * probabilityEdible
+    EOne = Df * probabilityPoison
+    return (((Pf - EZero)**2) / EZero) + (((Nf - EOne)**2) / EOne)
+
 
 def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
     """
@@ -289,7 +321,7 @@ def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    root = DecisionNode(data)
+    root = DecisionNode(data, -1, 0, chi, max_depth, gain_ratio)
     queue = []
     queue.append(root)
     while(len(queue) > 0):
@@ -319,7 +351,17 @@ def predict(root, instance):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    currentNode = root
+    while(currentNode.terminal != True):
+        instanceFeatureValue = instance[currentNode.feature]
+        try:
+            indexOfChild = currentNode.children_values.index(instanceFeatureValue)
+        except:
+            pred = 'p'
+            return pred
+        currentNode = currentNode.children[indexOfChild]
+
+    pred = currentNode.pred
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -339,7 +381,12 @@ def calc_accuracy(node, dataset):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    sumAccurate = 0
+    for row in dataset:
+        if predict(node, row) == row[-1]:
+            sumAccurate += 1
+
+    accuracy = (sumAccurate / len(dataset)) * 100
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -363,7 +410,9 @@ def depth_pruning(X_train, X_test):
     # TODO: Implement the function.                                           #
     ###########################################################################
     for max_depth in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
-        pass
+        tree = build_tree(X_train, calc_entropy, True, 1, max_depth)
+        training.append(calc_accuracy(tree, X_train))
+        testing.append(calc_accuracy(tree, X_test))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -392,7 +441,11 @@ def chi_pruning(X_train, X_test):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    for chi in [1, 0.5, 0.25, 0.1, 0.05, 0.0001]:
+        tree = build_tree(X_train, calc_entropy, True, chi)
+        chi_training_acc.append(calc_accuracy(tree, X_train))
+        chi_testing_acc.append(calc_accuracy(tree, X_test))
+        depth.append(tree.max_depth)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -411,7 +464,16 @@ def count_nodes(node):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    sumNodes = 0
+    queue = []
+    queue.append(node)
+    while (len(queue) > 0) :
+        currentNode = queue.pop()
+        sumNodes += 1
+        for child in currentNode.children:
+            queue.append(child)
+
+    n_nodes = sumNodes
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
