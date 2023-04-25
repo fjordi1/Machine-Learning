@@ -445,11 +445,24 @@ def chi_pruning(X_train, X_test):
         tree = build_tree(X_train, calc_entropy, True, chi)
         chi_training_acc.append(calc_accuracy(tree, X_train))
         chi_testing_acc.append(calc_accuracy(tree, X_test))
-        depth.append(tree.max_depth)
+        depth.append(find_tree_depth(tree))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return chi_training_acc, chi_testing_acc, depth
+
+def find_tree_depth(root):
+    treeDepth = root.depth
+    queue = []
+    queue.append(root)
+    while (len(queue) > 0) :
+        currentNode = queue.pop()
+        if currentNode.depth > treeDepth:
+            treeDepth = currentNode.depth
+        for child in currentNode.children:
+            queue.append(child)
+
+    return treeDepth
 
 def count_nodes(node):
     """
