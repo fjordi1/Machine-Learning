@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 ### Chi square table values ###
 # The first key is the degree of freedom 
