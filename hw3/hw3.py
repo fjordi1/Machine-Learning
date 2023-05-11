@@ -330,8 +330,8 @@ def multi_normal_pdf(x, mean, cov):
     ###########################################################################
     det = np.linalg.det(cov)
     lhs = ((2 * np.pi) ** -(len(cov) * 0.5)) * (det ** -(0.5))
-    top = -0.5 * np.dot(np.dot((x - mean).T, np.linalg.inv(cov)), (x - mean))
-    rhs = np.e ** top
+    expo = -0.5 * np.dot(np.dot((x - mean).T, np.linalg.inv(cov)), (x - mean))
+    rhs = np.e ** expo
     pdf = lhs * rhs
     ###########################################################################
     #                             END OF YOUR CODE                            #
