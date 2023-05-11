@@ -189,8 +189,10 @@ class NaiveNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        self.dataset = dataset
         self.class_value = class_value
+        self.totalLength = len(dataset)
+        mask = (dataset[:, -1] == class_value)
+        self.dataset = dataset[mask, : -1]
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -203,7 +205,7 @@ class NaiveNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        prior = np.count_nonzero(self.dataset[:, -1] == self.class_value) / len(self.dataset)
+        prior = len(self.dataset) / self.totalLength
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -217,9 +219,11 @@ class NaiveNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        std = np.std(self.dataset)
-        mean = np.mean(self.dataset)
-        likelihood = normal_pdf(x, mean, std)
+        likelihood = 1
+        for i, feature in enumerate(self.dataset.T):
+            mean = np.mean(feature)
+            std = np.std(feature)
+            likelihood *= normal_pdf(x[i], mean, std)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -234,7 +238,7 @@ class NaiveNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        posterior = self.get_instance_likelihood(x) * self.get_prior()
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -258,7 +262,8 @@ class MAPClassifier():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        self.ccd0 = ccd0
+        self.ccd1 = ccd1
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -276,7 +281,7 @@ class MAPClassifier():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        pred = 0 if (self.ccd0.get_instance_posterior(x) > self.ccd1.get_instance_posterior(x)) else 1
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -297,7 +302,12 @@ def compute_accuracy(test_set, map_classifier):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    correctlyClassified = 0
+    for i, instance in enumerate(test_set[:,:-1]):
+        prediction = map_classifier.predict(instance)
+        if (prediction == test_set[i, -1]):
+            correctlyClassified += 1
+    acc = correctlyClassified / len(test_set)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -318,7 +328,11 @@ def multi_normal_pdf(x, mean, cov):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    det = np.linalg.det(cov)
+    lhs = ((2 * np.pi) ** -(len(cov) * 0.5)) * (det ** -(0.5))
+    top = -0.5 * np.dot(np.dot((x - mean).T, np.linalg.inv(cov)), (x - mean))
+    rhs = np.e ** top
+    pdf = lhs * rhs
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -338,7 +352,12 @@ class MultiNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        self.class_value = class_value
+        self.totalLength = len(dataset)
+        mask = (dataset[:, -1] == class_value)
+        self.dataset = dataset[mask, : -1]
+        self.mean = np.mean(self.dataset, axis=0)
+        self.cov = np.cov(self.dataset.T)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -351,7 +370,7 @@ class MultiNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        prior = len(self.dataset) / self.totalLength
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -365,7 +384,7 @@ class MultiNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        likelihood = multi_normal_pdf(x, self.mean, self.cov)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -380,7 +399,7 @@ class MultiNormalClassDistribution():
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        posterior = self.get_instance_likelihood(x) * self.get_prior()
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
