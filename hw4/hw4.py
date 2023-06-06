@@ -31,16 +31,16 @@ class LogisticRegressionGD(object):
         self.thetas = []
 
     def sigmoid(self, x):
-        t = np.dot(self.theta, x)
+        t = np.dot(x, self.theta)
         ePow = np.e ** -t
 
         return 1 / (1 + ePow)
     
     def loss_function(self, x, y):
-        lhs = -y * np.log(self.sigmoid(x))
-        rhs = (1 - y) * np.log(1 - self.sigmoid(x))
+        lhs = np.dot(-y , np.log(self.sigmoid(x)))
+        rhs = np.dot((1 - y) , np.log(1 - self.sigmoid(x)))
 
-        return lhs - rhs
+        return (lhs - rhs) / len(y)
     
     def loss_function_avg(self, X, y):
         m = len(y)
@@ -82,14 +82,10 @@ class LogisticRegressionGD(object):
         X_trick = np.c_[col, X]
 
         for i in range(self.n_iter):
-          m = len(X_trick)
-          
-          h = np.dot(X_trick, self.theta)
-          errors = h - y
-          sum = self.eta * (np.dot(errors, X_trick)) / m
+          h = np.dot(X_trick.T ,self.sigmoid(X_trick) - y)
 
-          self.theta = self.theta - sum
-          self.Js.append(self.loss_function_avg(X_trick, y))
+          self.theta = self.theta - self.eta * h
+          self.Js.append(self.loss_function(X_trick, y))
           self.thetas.append(self.theta)
           if i > 0 and (self.Js[-2] - self.Js[-1] < self.eps):
               break
@@ -154,7 +150,44 @@ def cross_validation(X, y, folds, algo, random_state):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    SumAccuracies = 0
+    shuffledIndices = np.arange(len(X))
+    np.random.shuffle(shuffledIndices)
+    X = X[shuffledIndices]
+    y = y[shuffledIndices]
+
+    foldSize = len(X) // folds # 5-fold cross validation
+
+    foldsX = []
+    foldsY = []
+    index = 0
+
+    for k in range(folds):
+      foldsX.append(X[index : index + foldSize])
+      foldsY.append(y[index : index + foldSize])
+      index += foldSize
+ 
+    for i in range(folds):
+      X_valid = foldsX[i]
+      y_valid = foldsY[i]
+
+      for j in range(folds):
+        initiated = False
+        if j == i:
+          continue
+        if initiated == False:
+          X_train = foldsX[j]
+          y_train = foldsY[j]
+          initiated = True
+        else:
+          X_train = np.concatenate(foldsX[j])
+          y_train = np.concatenate(foldsY[j]) 
+        
+      algo.fit(X_train, y_train)
+      preds = algo.predict(X_valid)
+      SumAccuracies += np.count_nonzero(preds == y_valid) / len(preds)
+            
+    cv_accuracy = SumAccuracies / folds       
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
