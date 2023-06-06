@@ -41,15 +41,6 @@ class LogisticRegressionGD(object):
         rhs = np.dot((1 - y) , np.log(1 - self.sigmoid(x)))
 
         return (lhs - rhs) / len(y)
-    
-    def loss_function_avg(self, X, y):
-        m = len(y)
-        sum = 0
-
-        for i in range(m):
-            sum += self.loss_function(X[i], y[i])
-
-        return sum / m
 
     def fit(self, X, y):
         """
@@ -83,7 +74,6 @@ class LogisticRegressionGD(object):
 
         for i in range(self.n_iter):
           h = np.dot(X_trick.T ,self.sigmoid(X_trick) - y)
-
           self.theta = self.theta - self.eta * h
           self.Js.append(self.loss_function(X_trick, y))
           self.thetas.append(self.theta)
@@ -185,7 +175,7 @@ def cross_validation(X, y, folds, algo, random_state):
         
       algo.fit(X_train, y_train)
       preds = algo.predict(X_valid)
-      SumAccuracies += np.count_nonzero(preds == y_valid) / len(preds)
+      SumAccuracies += np.count_nonzero(preds == y_valid) / len(y_valid)
             
     cv_accuracy = SumAccuracies / folds       
     ###########################################################################
