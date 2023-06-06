@@ -75,10 +75,11 @@ class LogisticRegressionGD(object):
         for i in range(self.n_iter):
           h = np.dot(X_trick.T ,self.sigmoid(X_trick) - y)
           self.theta = self.theta - self.eta * h
-          self.Js.append(self.loss_function(X_trick, y))
+          loss = self.loss_function(X_trick, y)
           self.thetas.append(self.theta)
-          if i > 0 and (self.Js[-2] - self.Js[-1] < self.eps):
+          if i > 0 and (self.Js[-1] - loss < self.eps):
               break
+          self.Js.append(loss)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
