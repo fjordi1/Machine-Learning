@@ -30,6 +30,27 @@ class LogisticRegressionGD(object):
         self.Js = []
         self.thetas = []
 
+    def sigmoid(self, x):
+        t = np.dot(self.theta, x)
+        ePow = np.e ** -t
+
+        return 1 / (1 + ePow)
+    
+    def loss_function(self, x, y):
+        lhs = -y * np.log(self.sigmoid(x))
+        rhs = (1 - y) * np.log(1 - self.sigmoid(x))
+
+        return lhs - rhs
+    
+    def loss_function_avg(self, X, y):
+        m = len(y)
+        sum = 0
+
+        for i in range(m):
+            sum += self.loss_function(X[i], y[i])
+
+        return sum / m
+
     def fit(self, X, y):
         """
         Fit training data (the learning phase).
@@ -55,7 +76,23 @@ class LogisticRegressionGD(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        self.theta = np.ones(X.shape[1] + 1)
+        # Bias trick:
+        col = np.ones(len(X))  
+        X_trick = np.c_[col, X]
+
+        for i in range(self.n_iter):
+          m = len(X_trick)
+          
+          h = np.dot(X_trick, self.theta)
+          errors = h - y
+          sum = self.eta * (np.dot(errors, X_trick)) / m
+
+          self.theta = self.theta - sum
+          self.Js.append(self.loss_function_avg(X_trick, y))
+          self.thetas.append(self.theta)
+          if i > 0 and (self.Js[-2] - self.Js[-1] < self.eps):
+              break
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -67,11 +104,19 @@ class LogisticRegressionGD(object):
         ----------
         X : {array-like}, shape = [n_examples, n_features]
         """
-        preds = None
+        preds = []
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        col = np.ones(len(X))
+        X = np.c_[col, X]
+
+        for row in X:
+            sigmoid = self.sigmoid(row)
+            if sigmoid > 0.5:
+                preds.append(1)
+            else :
+                preds.append(0)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
