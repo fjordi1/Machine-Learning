@@ -335,6 +335,8 @@ def gmm_pdf(data, weights, mus, sigmas):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
+    pdf = np.zeros_like(data)
+
     for i in range(len(weights)):
         pdf += weights[i] * norm_pdf(data, mus[i], sigmas[i])
     ###########################################################################
@@ -358,6 +360,7 @@ class NaiveBayesGaussian(object):
         self.k = k
         self.random_state = random_state
         self.prior = None
+        self.em_models = []
 
     def fit(self, X, y):
         """
@@ -374,12 +377,16 @@ class NaiveBayesGaussian(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        em = EM(self.k)
-        em.init_params(X)
-        em.fit(X)
-        distribution_params = em.get_dist_params()
-        pdf = gmm_pdf(X, distribution_params[0], distribution_params[1], distribution_params[2])
-        np.argmax(pdf)
+        self.classes, classesCounts = np.unique(y, return_counts=True)
+        self.prior = np.empty(len(self.classes))
+        for i, c in enumerate(self.classes):
+            self.prior[i] = classesCounts[i] / len(y)
+
+            em = EM(self.k)
+            indices = np.where(y == c)[0]
+            x = X[indices]
+            em.fit(x[:, 0].reshape(-1, 1))
+            self.em_models.append(em)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -391,15 +398,25 @@ class NaiveBayesGaussian(object):
         ----------
         X : {array-like}, shape = [n_examples, n_features]
         """
-        preds = None
+        preds = []
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        for x in X:
+            class_scores = []
+            for i, c in enumerate(self.classes):
+                em = self.em_models[i]
+                dist_params = em.get_dist_params()
+                class_score = np.log(self.prior[i])
+                for j in range(len(x)):
+                    pdf = gmm_pdf(x[j], dist_params[0], dist_params[1], dist_params[2])
+                    class_score += np.log(pdf)
+                class_scores.append(class_score)
+            preds.append(self.classes[np.argmax(class_scores)])
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
-        return preds
+        return np.array(preds)
 
 def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     ''' 
