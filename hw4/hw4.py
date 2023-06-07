@@ -77,7 +77,7 @@ class LogisticRegressionGD(object):
           self.theta = self.theta - self.eta * h
           loss = self.loss_function(X_trick, y)
           self.thetas.append(self.theta)
-          if i > 0 and (self.Js[-1] - loss < self.eps):
+          if i > 0 and (np.abs(self.Js[-1] - loss) < self.eps):
               break
           self.Js.append(loss)
         ###########################################################################
@@ -200,7 +200,7 @@ def norm_pdf(data, mu, sigma):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    p = (1 / np.sqrt(2 * np.pi * (sigma ** 2))) * np.e ** -(((data - mu) ** 2) / (2 * (sigma ** 2)))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -244,7 +244,11 @@ class EM(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        self.responsibilities = np.ones((len(data), self.k)) / self.k
+        self.weights = np.ones(self.k) / self.k
+        self.mus = np.random.uniform(np.min(data), np.max(data), self.k)
+        self.sigmas = np.random.rand(self.k)
+        self.costs = []
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -256,7 +260,9 @@ class EM(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        numerator = self.weights * norm_pdf(data, self.mus, self.sigmas)
+        denominator = np.sum(numerator, axis = 1, keepdims=True)
+        self.responsibilities = numerator / denominator
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -268,10 +274,21 @@ class EM(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        self.weights = np.sum(self.responsibilities, axis=0) / len(self.responsibilities)
+        self.mus = np.sum(self.responsibilities * data, axis=0) / (len(self.responsibilities) * self.weights)
+        rhs = (data - self.mus) ** 2
+        self.sigmas = np.sqrt(np.sum(self.responsibilities * rhs, axis=0) / (len(self.responsibilities) * self.weights))
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
+    def cost(self, data):
+        cost = 0
+        
+        for i in range(len(data)):
+            for j in range(self.k):
+                cost -= np.log(self.weights[j] * norm_pdf(data[i], self.mus[j], self.sigmas[j]))
+            
+        return cost
 
     def fit(self, data):
         """
@@ -285,7 +302,14 @@ class EM(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        self.init_params(data)
+        for i in range(self.n_iter):
+            self.expectation(data)
+            self.maximization(data)
+            cost = self.cost(data)
+            if i > 1 and np.abs(self.costs[-1] - cost) < self.eps:
+                break
+            self.costs.append(cost)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -311,7 +335,8 @@ def gmm_pdf(data, weights, mus, sigmas):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    for i in range(len(weights)):
+        pdf += weights[i] * norm_pdf(data, mus[i], sigmas[i])
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -349,7 +374,12 @@ class NaiveBayesGaussian(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
-        pass
+        em = EM(self.k)
+        em.init_params(X)
+        em.fit(X)
+        distribution_params = em.get_dist_params()
+        pdf = gmm_pdf(X, distribution_params[0], distribution_params[1], distribution_params[2])
+        np.argmax(pdf)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
