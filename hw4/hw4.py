@@ -501,7 +501,40 @@ def generate_datasets():
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    # First dataset:
+    n_samples = 250
+    mean1 = [1, 2, 3]
+    cov1 = [[1, 0.5, 0.9], [0.5, 1, 0.7], [0.9, 0.7, 1]]
+    mean2 = [3, 4, 5]
+    cov2 = [[1, 0.3, 0.4], [0.3, 1, 0.5], [0.4, 0.5, 1]]
+    
+    X1 = multivariate_normal(mean1, cov1).rvs(n_samples, random_state=1)
+
+    X2 = multivariate_normal(mean2, cov2).rvs(n_samples, random_state=1)
+
+    A_X = np.vstack((X1, X2))
+    A_y = np.hstack((np.zeros(n_samples), np.ones(n_samples)))
+
+    dataset_a_features = A_X
+    dataset_a_labels = A_y
+
+    # Second dataset:
+    n_samples = 250
+    mean1 = [-2, 0, 2]
+    cov1 = [[2, 0, 0], [0, 1, 0], [0, 0, 0.5]]
+    mean2 = [0, -3, 3]
+    cov2 = [[1, 0, 0], [0, 2, 0], [0, 0, 3]]
+  
+    X1 = multivariate_normal(mean1, cov1).rvs(n_samples, random_state=1)
+
+    X2 = multivariate_normal(mean2, cov2).rvs(n_samples, random_state=1)
+
+    B_X = np.vstack((X1, X2))
+    B_y = np.hstack((np.zeros(n_samples), np.ones(n_samples)))
+
+    dataset_b_features = B_X
+    dataset_b_labels = B_y
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
