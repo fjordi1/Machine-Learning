@@ -107,7 +107,7 @@ class LogisticRegressionGD(object):
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
-        return preds
+        return np.array(preds)
 
 def cross_validation(X, y, folds, algo, random_state):
     """
@@ -281,6 +281,7 @@ class EM(object):
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
+
     def cost(self, data):
         cost = 0
         
@@ -379,13 +380,12 @@ class NaiveBayesGaussian(object):
         ###########################################################################
         self.classes, classesCounts = np.unique(y, return_counts=True)
         self.prior = np.empty(len(self.classes))
-        for i, c in enumerate(self.classes):
+        for i, classif in enumerate(self.classes):
             self.prior[i] = classesCounts[i] / len(y)
-
+            indicies = np.where(y == classif)[0]
+            X_class = X[indicies]
             em = EM(self.k)
-            indices = np.where(y == c)[0]
-            x = X[indices]
-            em.fit(x[:, 0].reshape(-1, 1))
+            em.fit(X_class.reshape(-1, 1))
             self.em_models.append(em)
         ###########################################################################
         #                             END OF YOUR CODE                            #
@@ -405,18 +405,32 @@ class NaiveBayesGaussian(object):
         for x in X:
             class_scores = []
             for i, c in enumerate(self.classes):
+                class_score = self.prior[i]
                 em = self.em_models[i]
                 dist_params = em.get_dist_params()
-                class_score = np.log(self.prior[i])
-                for j in range(len(x)):
-                    pdf = gmm_pdf(x[j], dist_params[0], dist_params[1], dist_params[2])
-                    class_score += np.log(pdf)
+                for feature in x.T:
+                    pdf = gmm_pdf(feature, dist_params[0], dist_params[1], dist_params[2])
+                    class_score *= pdf
                 class_scores.append(class_score)
+
+            # Normalize probs
+            sum_probs = np.sum(class_scores)
+            class_scores = class_scores / sum_probs
             preds.append(self.classes[np.argmax(class_scores)])
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
         return np.array(preds)
+    
+def calc_accuracy(preds, y_truth):
+    correct_count = 0
+    for true_label, pred_label in zip(preds, y_truth):
+        if true_label == pred_label:
+            correct_count += 1
+
+    accuracy = correct_count / len(y_truth)
+    return accuracy
+        
 
 def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     ''' 
@@ -451,7 +465,20 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    lor = LogisticRegressionGD(eta=best_eta, eps=best_eps)
+    lor.fit(x_train, y_train)
+    nbg = NaiveBayesGaussian(k)
+    nbg.fit(x_train, y_train)
+
+    lor_test_preds = lor.predict(x_test)
+    lor_train_preds = lor.predict(x_train)
+    lor_test_acc = calc_accuracy(lor_test_preds, y_test)
+    lor_train_acc = calc_accuracy(lor_train_preds, y_train)
+
+    nbg_test_preds = nbg.predict(x_test)
+    nbg_train_preds = nbg.predict(x_train)
+    bayes_train_acc = calc_accuracy(nbg_train_preds, y_train)
+    bayes_test_acc = calc_accuracy(nbg_test_preds, y_test)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
