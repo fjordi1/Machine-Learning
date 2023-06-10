@@ -244,11 +244,13 @@ class EM(object):
         ###########################################################################
         # TODO: Implement the function.                                           #
         ###########################################################################
+        self.costs = []
         self.responsibilities = np.ones((len(data), self.k)) / self.k
         self.weights = np.ones(self.k) / self.k
+        np.random.choice(data.shape[0], size=self.k)
+        self.mus = np.random.uniform(np.min(data), np.max(data), self.k)
         self.mus = np.random.uniform(np.min(data), np.max(data), self.k)
         self.sigmas = np.random.rand(self.k)
-        self.costs = []
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -384,9 +386,11 @@ class NaiveBayesGaussian(object):
             self.prior[i] = classesCounts[i] / len(y)
             indicies = np.where(y == classif)[0]
             X_class = X[indicies]
-            em = EM(self.k)
-            em.fit(X_class.reshape(-1, 1))
-            self.em_models.append(em)
+            self.em_models.append([])
+            for j in range(X_class.shape[1]):
+              em = EM(self.k)
+              em.fit(X_class[:, j].reshape(-1, 1))
+              self.em_models[i].append(em)
         ###########################################################################
         #                             END OF YOUR CODE                            #
         ###########################################################################
@@ -406,9 +410,10 @@ class NaiveBayesGaussian(object):
             class_scores = []
             for i, c in enumerate(self.classes):
                 class_score = self.prior[i]
-                em = self.em_models[i]
-                dist_params = em.get_dist_params()
-                for feature in x.T:
+                
+                for j, feature in enumerate(x.T):
+                    em = self.em_models[i][j]
+                    dist_params = em.get_dist_params()
                     pdf = gmm_pdf(feature, dist_params[0], dist_params[1], dist_params[2])
                     class_score *= pdf
                 class_scores.append(class_score)
@@ -506,7 +511,7 @@ def generate_datasets():
     mean1 = [1, 2, 3]
     cov1 = [[1, 0.5, 0.9], [0.5, 1, 0.7], [0.9, 0.7, 1]]
     mean2 = [3, 4, 5]
-    cov2 = [[1, 0.3, 0.4], [0.3, 1, 0.5], [0.4, 0.5, 1]]
+    cov2 = [[1, 0.8, 0.9], [0.8, 1, 0.5], [0.9, 0.5, 1]]
     
     X1 = multivariate_normal(mean1, cov1).rvs(n_samples, random_state=1)
 
@@ -520,10 +525,10 @@ def generate_datasets():
 
     # Second dataset:
     n_samples = 250
-    mean1 = [-2, 0, 2]
-    cov1 = [[2, 0, 0], [0, 1, 0], [0, 0, 0.5]]
-    mean2 = [0, -3, 3]
-    cov2 = [[1, 0, 0], [0, 2, 0], [0, 0, 3]]
+    mean1 = [3, 4, 3]
+    cov1 = [[3, 1, 2], [1, 5, 0], [2, 0, 4]]
+    mean2 = [1, 2, 3]
+    cov2 = [[3, 1, 2], [1, 5, 0], [2, 0, 4]]
   
     X1 = multivariate_normal(mean1, cov1).rvs(n_samples, random_state=1)
 
